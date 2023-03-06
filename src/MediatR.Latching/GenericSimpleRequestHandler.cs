@@ -23,9 +23,9 @@ namespace MediatR.Latching
             this.serviceProvider = serviceProvider;
         }
 
-        protected override void HandleCore(TRequestWrapper message)
+        protected override void Handle(TRequestWrapper requestWrapper)
         {
-            handlerDelegate(requestHandler, message.Request, serviceProvider);
+            handlerDelegate(requestHandler, requestWrapper.Request, serviceProvider);
         }
     }
 }
