@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MediatR.Latching
 {
-    public class GenericSimpleRequestHandler<TRequestHandler, TRequestHandlerBase, TRequestWrapper, TRequest, TRequestBase> : RequestHandler<TRequestWrapper>
+    public class GenericSimpleRequestHandler<TRequestHandler, TRequestHandlerBase, TRequestWrapper, TRequest, TRequestBase> : IRequestHandler<TRequestWrapper, Unit>
         where TRequestWrapper : SimpleRequestWrapper<TRequest>
         where TRequestHandlerBase : class
         where TRequestBase: class
@@ -23,9 +25,11 @@ namespace MediatR.Latching
             this.serviceProvider = serviceProvider;
         }
 
-        protected override void Handle(TRequestWrapper requestWrapper)
+        public Task<Unit> Handle(TRequestWrapper requestWrapper, CancellationToken cancellationToken)
         {
             handlerDelegate(requestHandler, requestWrapper.Request, serviceProvider);
+
+            return Task.FromResult(Unit.Value);
         }
     }
 }

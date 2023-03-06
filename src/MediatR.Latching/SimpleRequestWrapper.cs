@@ -1,6 +1,6 @@
 ﻿namespace MediatR.Latching
 {
-    public class SimpleRequestWrapper<TRequest> : IRequest
+    public class SimpleRequestWrapper<TRequest> : IRequest<Unit>
     {
         public SimpleRequestWrapper(TRequest request)
         {

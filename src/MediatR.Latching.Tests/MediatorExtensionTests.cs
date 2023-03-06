@@ -15,14 +15,14 @@ namespace MediatR.Latching.Tests
         {
             var mediatorMock = Substitute.For<IMediator>();
 
-            mediatorMock.Send(Arg.Do<IRequest>(AssertCall));
+            mediatorMock.Send(Arg.Do<IRequest<Unit>>(AssertCall));
 
             mediatorMock.SendRequest(new SimpleRequest());
 
             mediatorMock.Received(1);
         }
 
-        private static void AssertCall(IRequest wrappedRequest)
+        private static void AssertCall(IRequest<Unit> wrappedRequest)
         {
             Assert.NotNull(wrappedRequest);
 
