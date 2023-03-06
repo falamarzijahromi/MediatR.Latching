@@ -7,9 +7,21 @@
     <AssemblyVersion>0.1.0</AssemblyVersion>
     <FileVersion>0.1.0</FileVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>Icon.png</PackageIcon>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\..\Icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <PackageReference Include="MediatR" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="1.0.0" />
