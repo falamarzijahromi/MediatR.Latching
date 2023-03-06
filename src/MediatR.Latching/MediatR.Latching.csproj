@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <RepositoryUrl>https://github.com/falamarzijahromi/MediatR.Latching</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <AssemblyVersion>0.3.0</AssemblyVersion>
@@ -23,7 +23,7 @@
       <PackagePath>\</PackagePath>
     </None>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <PackageReference Include="MediatR" Version="[9.0.0,)" />
+    <PackageReference Include="MediatR" Version="[11.0.0,)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="[1.0.0,)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[1.0.0,)" />
   </ItemGroup>
