@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/src/.vs
+/src/MediatR.Latching/bin
+/src/MediatR.Latching/obj
+/src/MediatR.Latching.Tests/bin
+/src/MediatR.Latching.Tests/obj
