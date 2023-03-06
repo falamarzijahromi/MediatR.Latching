@@ -7,3 +7,6 @@
 /src/MediatR.Latching/obj
 /src/MediatR.Latching.Tests/bin
 /src/MediatR.Latching.Tests/obj
+/MediatR.Latching.OpTest/MediatR.Latching.OpTest/obj/Debug/net7.0
+/MediatR.Latching.OpTest/MediatR.Latching.OpTest/obj
+/MediatR.Latching.OpTest/.vs/MediatR.Latching.OpTest
