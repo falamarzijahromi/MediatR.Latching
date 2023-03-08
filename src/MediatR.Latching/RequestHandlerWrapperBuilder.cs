@@ -18,8 +18,8 @@ namespace MediatR.Latching
             return this;
         }
 
-        public RequestHandlerWrapperBuilder RegisterSimpleRequestHandlers<TRequestBase, TRequestHandlerBase>(
-            out ServiceDescriptor[] handlerDescriptors)
+        public ServiceDescriptor[] HandleRequests<TRequestHandlerBase, TRequestBase>(
+            Expression<Action<TRequestHandlerBase, TRequestBase>> by)
         {
             if (!_assemblies.Any())
                 throw new Exception("Assemblies be provided in order to Register Request Handlers.");
@@ -29,90 +29,100 @@ namespace MediatR.Latching
 
             var genericType = typeof(TRequestHandlerBase).GetGenericTypeDefinition();
 
-            var allTypes = _assemblies
+            var byBody = by.Body as MethodCallExpression;
+
+            if (byBody == null || byBody.Method.GetParameters().Length != 1)
+            {
+                throw new Exception("Handling expression must be a single method call lambda with only one parameter.");
+            }
+
+            var allClassesWithInterfaces = _assemblies
                 .SelectMany(asm => asm.ExportedTypes)
                 .Where(type => type.IsClass)
+                .Select(type => new { RequestHandlerType = type, Interfaces = type.GetInterfaces().Where(i => i.IsGenericType) })
+                .Where(map => map.Interfaces.Any())
                 .ToList();
 
-            var relatedHandlerWithRequest = GetRelatedHandlerWithRequest(genericType, allTypes);
+            var allDescriptors = new List<ServiceDescriptor>();
 
-            handlerDescriptors = GetHandlerDescriptors<TRequestBase, TRequestHandlerBase>(relatedHandlerWithRequest);
-
-            return this;
-        }
-
-        public RequestHandlerWrapperBuilder HandleRequests<TRequestBase, TRequestHandlerBase>(
-            Expression<Action<TRequestBase, TRequestHandlerBase, IServiceProvider>> by,
-            out ServiceDescriptor delegateDescriptor)
-    {
-        var actionDelegate = by.Compile();
-
-        delegateDescriptor = new ServiceDescriptor(
-            serviceType: actionDelegate.GetType(),
-            implementationType: actionDelegate.GetType(),
-            ServiceLifetime.Scoped);
-
-        return this;
-    }
-
-        private ServiceDescriptor[] GetHandlerDescriptors<TRequestBase, TRequestHandlerBase>(List<(Type handlerType, Type baseInterface, Type requestType)> relatedHandlerWithRequest)
-        {
-            var handlerDescriptors = new List<ServiceDescriptor>();
-
-            foreach (var tupleTypes in relatedHandlerWithRequest)
+            foreach (var @classWithInterfaces in allClassesWithInterfaces)
             {
-                var requestWrapperType = CreateRequestWrapperType(tupleTypes.requestType);
+                var handlingInterface = @classWithInterfaces.Interfaces
+                    .Where(i => i.GetGenericTypeDefinition().Equals(genericType))
+                    .SingleOrDefault();
 
-                var genericHandlerType =
-                    CreateGenericSimpleRequestHandler<TRequestHandlerBase, TRequestBase>(tupleTypes.handlerType, requestWrapperType, tupleTypes.requestType);
-
-                var mediatrHandlerType = CreateMediatrHandlerType(requestWrapperType);
-
-                var handlerDescriptor = new ServiceDescriptor(mediatrHandlerType, genericHandlerType, ServiceLifetime.Scoped);
-
-                handlerDescriptors.Add(handlerDescriptor);
-            }
-
-            return handlerDescriptors.ToArray();
-        }
-
-        private static List<(Type handlerType, Type baseInterface, Type requestType)> GetRelatedHandlerWithRequest(Type genericType, List<Type> allTypes)
-        {
-            var relatedHandlerWithRequest = new List<(Type handlerType, Type baseInterface, Type requestType)>();
-
-            foreach (var handlerType in allTypes)
-            {
-                var interfaces = handlerType.GetInterfaces();
-
-                var baseInterface = interfaces
-                    .Where(itf => itf.IsGenericType)
-                    .SingleOrDefault(itf => itf.GetGenericTypeDefinition().Equals(genericType));
-
-                if (baseInterface is null)
+                if (handlingInterface is null)
+                {
                     continue;
+                }
 
-                var requestType = baseInterface.GenericTypeArguments[0];
+                var requestType = handlingInterface.GenericTypeArguments[0];
+                var requestWrapperType = CreateRequestWrapperType(requestType);
 
-                relatedHandlerWithRequest.Add((handlerType, baseInterface, requestType));
+                var requestHandlerDelegateDescriptor = CreateHandlingDelegateServiceDescriptor(
+                    handlingMethodName: byBody.Method.Name,
+                    requestHandlerType: classWithInterfaces.RequestHandlerType,
+                    requestType: requestType);
+
+                var mediatrRequestHandlerDescriptor = CreateMediatrRequestHandlerDescriptor(
+                    requestWrapperType: requestWrapperType,
+                    requestHandlerType: classWithInterfaces.RequestHandlerType,
+                    requestType: requestType);
+
+                var requestHandlerDescriptor = new ServiceDescriptor(
+                    serviceType: classWithInterfaces.RequestHandlerType,
+                    implementationType: classWithInterfaces.RequestHandlerType,
+                    lifetime: ServiceLifetime.Scoped);
+
+
+                allDescriptors.Add(mediatrRequestHandlerDescriptor);
+                allDescriptors.Add(requestHandlerDelegateDescriptor);
+                allDescriptors.Add(requestHandlerDescriptor);
             }
 
-            return relatedHandlerWithRequest;
-        }
-
-        private static Type CreateMediatrHandlerType(Type requestWrapperType)
-        {
-            return typeof(IRequestHandler<,>).MakeGenericType(requestWrapperType, typeof(Unit));
-        }
-
-        private static Type CreateGenericSimpleRequestHandler<TRequestHandler, TRequest>(Type handlerType, Type requestWrapperType, Type requestType)
-        {
-            return typeof(GenericSimpleRequestHandler<,,,,>)
-                .MakeGenericType(handlerType, typeof(TRequestHandler), requestWrapperType, requestType, typeof(TRequest));
+            return allDescriptors.ToArray();
         }
 
         private static Type CreateRequestWrapperType(Type requestType)
         {
             return typeof(SimpleRequestWrapper<>).MakeGenericType(requestType);
+        }
+
+        private static ServiceDescriptor CreateMediatrRequestHandlerDescriptor(
+            Type requestWrapperType,
+            Type requestHandlerType,
+            Type requestType)
+        {
+            var mediatrRequestHandlerType = typeof(IRequestHandler<,>)
+                .MakeGenericType(requestWrapperType, typeof(Unit));
+
+            var mediatrRequestHandlerService = typeof(GenericSimpleRequestHandler<,,>)
+                .MakeGenericType(requestHandlerType, requestWrapperType, requestType);
+
+            return new ServiceDescriptor(
+               serviceType: mediatrRequestHandlerType,
+               implementationType: mediatrRequestHandlerService,
+               lifetime: ServiceLifetime.Scoped);
+        }
+
+        private static ServiceDescriptor CreateHandlingDelegateServiceDescriptor(
+            string handlingMethodName,
+            Type requestHandlerType,
+            Type requestType)
+        {
+            var handlingMethod = requestHandlerType.GetMethod(handlingMethodName);
+
+            var handlerParameter = Expression.Parameter(requestHandlerType, "handler");
+            var requestParameter = Expression.Parameter(requestType, "request");
+
+            var handlingMethodExpression = Expression.Call(handlerParameter, handlingMethod, requestParameter);
+
+            var handlingActionType = typeof(Action<,>).MakeGenericType(requestHandlerType, requestType);
+
+            var handlingDelegate =
+                Expression.Lambda(handlingActionType, handlingMethodExpression, handlerParameter, requestParameter).Compile();
+
+            return new ServiceDescriptor(handlingActionType, handlingDelegate);
         }
     }
 }

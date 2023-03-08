@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NSubstitute;
-using MediatR.Latching;
+﻿using NSubstitute;
 
 namespace MediatR.Latching.Tests
 {

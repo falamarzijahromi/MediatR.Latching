@@ -4,30 +4,23 @@ using System.Threading.Tasks;
 
 namespace MediatR.Latching
 {
-    public class GenericSimpleRequestHandler<TRequestHandler, TRequestHandlerBase, TRequestWrapper, TRequest, TRequestBase> : IRequestHandler<TRequestWrapper, Unit>
+    public class GenericSimpleRequestHandler<TRequestHandler, TRequestWrapper, TRequest> : IRequestHandler<TRequestWrapper, Unit>
         where TRequestWrapper : SimpleRequestWrapper<TRequest>
-        where TRequestHandlerBase : class
-        where TRequestBase: class
-        where TRequestHandler : class
-        where TRequest : TRequestBase
     {
         private readonly TRequestHandler requestHandler;
-        private readonly Action<TRequestHandler, TRequestBase, IServiceProvider> handlerDelegate;
-        private readonly IServiceProvider serviceProvider;
+        private readonly Action<TRequestHandler, TRequest> handlerDelegate;
 
         public GenericSimpleRequestHandler(
-            Action<TRequestHandler, TRequestBase, IServiceProvider> handlerDelegate,
-            IServiceProvider serviceProvider,
+            Action<TRequestHandler, TRequest> handlerDelegate,
             TRequestHandler requestHandler)
         {
-            this.requestHandler = requestHandler;
             this.handlerDelegate = handlerDelegate;
-            this.serviceProvider = serviceProvider;
+            this.requestHandler = requestHandler;
         }
 
         public Task<Unit> Handle(TRequestWrapper requestWrapper, CancellationToken cancellationToken)
         {
-            handlerDelegate(requestHandler, requestWrapper.Request, serviceProvider);
+            handlerDelegate(requestHandler, requestWrapper.Request);
 
             return Task.FromResult(Unit.Value);
         }

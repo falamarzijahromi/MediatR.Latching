@@ -9,19 +9,16 @@ namespace MediatR.Latching
     {
         public static IServiceCollection LatchRequestHandlers<TRequestHandlerBase, TRequestBase>(
             this IServiceCollection services,
-            Expression<Action<TRequestBase, TRequestHandlerBase, IServiceProvider>> by,
+            Expression<Action<TRequestHandlerBase, TRequestBase>> by,
             params Assembly[] lookInto)
         {
             var builder = new RequestHandlerWrapperBuilder();
 
-            builder
+            var allDescriptors = builder
                .LookIntoAssemblies(assemblies: lookInto)
-               .RegisterSimpleRequestHandlers<TRequestBase, TRequestHandlerBase>(out var handlerDescriptors)
-               .HandleRequests(by, out var delegateDescriptor);
+               .HandleRequests(by);
 
-            services.Add(delegateDescriptor);
-
-            foreach (var descriptor in handlerDescriptors)
+            foreach (var descriptor in allDescriptors)
             {
                 services.Add(descriptor);
             }
